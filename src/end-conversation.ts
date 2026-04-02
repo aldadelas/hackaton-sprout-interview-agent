@@ -8,6 +8,8 @@ const STRONG_END_PATTERNS = [
   /\b(akhiri|sudahi|selesaikan)\s+(percakapan|obrolan|chat)\b/i,
   /\b(tutup|end|close)\s+(room|ruangan)\b/i,
   /\b(saya|aku)\s+(ingin|mau)\s+(selesai|akhiri|sudahi)\b/i,
+  /\b(udah|sudah)\s+(cukup|selesai)\b/i,
+  /\b(ga|gak|ngga|nggak)\s+ada\b.*\b(udah|sudah)\s+(cukup|selesai)\b/i,
   /\b(cukup)\s+(terima kasih|makasih|thanks)\b/i,
   /\b(terima kasih|makasih),?\s*(selesai|cukup|sekian)\b/i,
   /\b(sekian dulu|cukup dulu|sekian ya|cukup ya)\b/i,

@@ -14,6 +14,8 @@ describe('hasEndConversationIntent', () => {
     expect(hasEndConversationIntent('sekian dulu')).toBe(true);
     expect(hasEndConversationIntent('cukup terima kasih')).toBe(true);
     expect(hasEndConversationIntent('selamat tinggal')).toBe(true);
+    expect(hasEndConversationIntent('udah cukup')).toBe(true);
+    expect(hasEndConversationIntent('nggak ada sih udah cukup')).toBe(true);
   });
 
   it('mengembalikan false untuk percakapan biasa', () => {

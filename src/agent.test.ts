@@ -1,20 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { Agent } from './agent';
+import { Agent, DEFAULT_AGENT_INSTRUCTIONS } from './agent';
 
 describe('Agent instructions', () => {
-  it('mendefinisikan pewawancara multipurpose terintegrasi Jobseeker', () => {
+  it('mendefinisikan role interviewer HR', () => {
     const agent = new Agent();
 
-    expect(agent.instructions).toContain('Jobseeker');
-    expect(agent.instructions).toContain('voice interviewer');
-    expect(agent.instructions).toContain('many different roles');
+    expect(agent.instructions).toContain('ROLE');
+    expect(agent.instructions).toContain('HR Interviewer profesional');
+    expect(agent.instructions).toContain('ALUR WAWANCARA');
   });
 
-  it('mengarahkan bahasa dan pertanyaan mengikuti konteks lowongan', () => {
+  it('mengarahkan alur wawancara dan aturan percakapan', () => {
     const agent = new Agent();
 
-    expect(agent.instructions).toContain('job metadata');
-    expect(agent.instructions).toContain('language');
-    expect(agent.instructions).toContain('one at a time');
+    expect(agent.instructions).toContain('ATURAN PERCAKAPAN');
+    expect(agent.instructions).toContain('Ajukan pertanyaan satu per satu');
+    expect(agent.instructions).toContain('PENJELASAN POSISI');
+  });
+
+  it('mengizinkan override instruksi lewat opsi konstruktor', () => {
+    const agent = new Agent({ instructions: 'Hanya tes.' });
+
+    expect(agent.instructions).toBe('Hanya tes.');
+    expect(DEFAULT_AGENT_INSTRUCTIONS).toContain('HR Interviewer profesional');
   });
 });

@@ -13,7 +13,8 @@ import { RoomServiceClient } from 'livekit-server-sdk';
 import { BackgroundVoiceCancellation } from '@livekit/noise-cancellation-node';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'node:url';
-import { Agent } from './agent';
+import { Agent, DEFAULT_AGENT_INSTRUCTIONS } from './agent';
+import { resolveAgentInstructions } from './instruction-api';
 import {
   hasEndConversationIntent,
   shouldEndConversationWithLlm,
@@ -50,6 +51,22 @@ export default defineAgent({
     let transcriptSent = false;
     let endingConversation = false;
 
+    const instructionApiUrl =
+      process.env.AGENT_INSTRUCTION_API_URL ??
+      'https://69ce0cad33a09f831b7cd3ec.mockapi.io/kuantum/session/:sessionId';
+    const instructionApiToken = process.env.AGENT_INSTRUCTION_API_TOKEN;
+    const instructionResult = await resolveAgentInstructions({
+      urlTemplate: instructionApiUrl,
+      ...(instructionApiToken ? { token: instructionApiToken } : {}),
+      defaultInstructions: DEFAULT_AGENT_INSTRUCTIONS,
+      ...(ctx.job.room?.metadata ? { roomMetadata: ctx.job.room.metadata } : {}),
+      signal: new AbortController().signal,
+    });
+
+    const agentInstructions = instructionResult.instructions;
+
+    await ctx.connect();
+
     // Set up a voice AI pipeline using OpenAI, Cartesia, Deepgram, and the LiveKit turn detector
     const session = new voice.AgentSession({
       aecWarmupDuration: getAecWarmupMs(),
@@ -58,7 +75,7 @@ export default defineAgent({
       // See all available models at https://docs.livekit.io/agents/models/stt/
       stt: new inference.STT({
         model: 'deepgram/nova-3',
-        language: (process.env.STT_LANGUAGE as inference.STTLanguages | undefined) ?? 'multi',
+        language: 'id',
       }),
 
       // A Large Language Model (LLM) is your agent's brain, processing user input and generating a response
@@ -96,7 +113,7 @@ export default defineAgent({
 
     // Start the session, which initializes the voice pipeline and warms up the models
     await session.start({
-      agent: new Agent(),
+      agent: new Agent({ instructions: agentInstructions }),
       room: ctx.room,
       inputOptions: {
         // LiveKit Cloud enhanced noise cancellation
@@ -232,9 +249,6 @@ export default defineAgent({
       await flushTranscript('job_shutdown');
       await endIntentClassifier.aclose();
     });
-
-    // Join the room and connect to the user
-    await ctx.connect();
 
     // Sapaan pembuka: tidak boleh diinterupsi (noise / percakapan latar saat agent mulai berbicara)
     session.generateReply({
