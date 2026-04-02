@@ -30,7 +30,7 @@ import {
 // Load environment variables from a local file.
 // Make sure to set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET
 // when running locally or self-hosting your agent server.
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env' });
 
 export default defineAgent({
   prewarm: async (proc: JobProcess) => {
