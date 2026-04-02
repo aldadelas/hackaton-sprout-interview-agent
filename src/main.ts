@@ -58,7 +58,7 @@ export default defineAgent({
       // See all available models at https://docs.livekit.io/agents/models/stt/
       stt: new inference.STT({
         model: 'deepgram/nova-3',
-        language: 'id',
+        language: (process.env.STT_LANGUAGE as inference.STTLanguages | undefined) ?? 'multi',
       }),
 
       // A Large Language Model (LLM) is your agent's brain, processing user input and generating a response
