@@ -18,6 +18,7 @@ const instructionDetailSchema = z.object({
   }),
   jobUrl: z.string().optional(),
   companyLandingPage: z.string().optional(),
+  applicationId: z.string().optional()
 });
 
 export type InstructionDetail = z.infer<typeof instructionDetailSchema>;
@@ -25,6 +26,7 @@ export type InstructionDetail = z.infer<typeof instructionDetailSchema>;
 export type ResolveInstructionsResult = {
   instructions: string;
   sessionId?: string;
+  applicationId?: string;
 };
 
 export type ResolveAgentInstructionsParams = {
@@ -105,6 +107,7 @@ export async function resolveAgentInstructions(
   const headers: Record<string, string> = {};
   if (token) {
     headers.Authorization = `Bearer ${token}`;
+    headers['x-internal-token'] = token;
   }
 
   const requestUrl = buildSessionInstructionUrl(urlTemplate, sessionId);
@@ -136,6 +139,7 @@ export async function resolveAgentInstructions(
     return {
       instructions: buildAugmentedInstruction(parsed.data, defaultInstructions),
       sessionId,
+      ...(parsed.data.applicationId ? { applicationId: parsed.data.applicationId } : {}),
     };
   } catch (error) {
     if ((error as Error)?.name === 'AbortError') {

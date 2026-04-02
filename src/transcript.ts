@@ -8,6 +8,7 @@ export type TranscriptPayload = {
   roomName: string;
   roomSid: string;
   jobId: string;
+  applicationId?: string;
   endedAt: string;
   transcript: TranscriptEntry[];
 };
@@ -42,12 +43,14 @@ export function createTranscriptStore() {
       roomName: string;
       roomSid: string;
       jobId: string;
+      applicationId?: string;
       endedAt?: string;
     }): TranscriptPayload {
       return {
         roomName: meta.roomName,
         roomSid: meta.roomSid,
         jobId: meta.jobId,
+        ...(meta.applicationId ? { applicationId: meta.applicationId } : {}),
         endedAt: meta.endedAt ?? new Date().toISOString(),
         transcript: [...entries],
       };

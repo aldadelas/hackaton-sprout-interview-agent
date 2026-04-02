@@ -51,9 +51,14 @@ export default defineAgent({
     let transcriptSent = false;
     let endingConversation = false;
 
-    const instructionApiUrl =
-      process.env.AGENT_INSTRUCTION_API_URL ??
-      'https://69ce0cad33a09f831b7cd3ec.mockapi.io/kuantum/session/:sessionId';
+    const instructionApiUrl = process.env.AGENT_INSTRUCTION_API_URL?.trim();
+    if (!instructionApiUrl) {
+      console.error(
+        'AGENT_INSTRUCTION_API_URL wajib diset. Contoh: https://your-domain/api/agent/instruction-set',
+      );
+      ctx.shutdown('missing_agent_instruction_api_url');
+      return;
+    }
     const instructionApiToken = process.env.AGENT_INSTRUCTION_API_TOKEN;
     const instructionResult = await resolveAgentInstructions({
       urlTemplate: instructionApiUrl,
@@ -64,6 +69,7 @@ export default defineAgent({
     });
 
     const agentInstructions = instructionResult.instructions;
+    const applicationId = instructionResult.applicationId;
 
     await ctx.connect();
 
@@ -222,6 +228,7 @@ export default defineAgent({
           roomName: ctx.room.name ?? '',
           roomSid,
           jobId: ctx.job.id,
+          ...(applicationId ? { applicationId } : {}),
         });
 
         const request = {

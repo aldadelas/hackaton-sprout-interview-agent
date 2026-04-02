@@ -68,6 +68,7 @@ describe('resolveAgentInstructions', () => {
         json: async () => ({
           id: '872hysvY62',
           instruction: 'agent ai interview',
+          applicationId: 'app-77',
           job: {
             title: 'Software Engineer',
             description: 'anything about job',
@@ -91,6 +92,7 @@ describe('resolveAgentInstructions', () => {
     });
 
     expect(result.sessionId).toBe('872hysvY62');
+    expect(result.applicationId).toBe('app-77');
     expect(result.instructions).toContain(defaultInstructions);
     expect(result.instructions).toContain('Instruksi backend: agent ai interview');
     expect(result.instructions).toContain('Job title: Software Engineer');

@@ -14,12 +14,14 @@ describe('transcript store', () => {
       roomName: 'room-a',
       roomSid: 'RM_123',
       jobId: 'job-1',
+      applicationId: 'app-1',
       endedAt: '2026-01-01T00:00:00.000Z',
     });
 
     expect(payload.transcript).toHaveLength(2);
     expect(payload.transcript[0]).toMatchObject({ role: 'user', text: 'Halo' });
     expect(payload.transcript[1]).toMatchObject({ role: 'assistant', text: 'Hai juga' });
+    expect(payload.applicationId).toBe('app-1');
   });
 });
 
@@ -38,6 +40,7 @@ describe('sendTranscriptToExternalApi', () => {
         roomName: 'room-a',
         roomSid: 'RM_123',
         jobId: 'job-1',
+        applicationId: 'app-1',
         endedAt: '2026-01-01T00:00:00.000Z',
         transcript: [{ role: 'user', text: 'Halo', createdAt: 1 }],
       },
@@ -54,6 +57,7 @@ describe('sendTranscriptToExternalApi', () => {
         roomName: 'room-a',
         roomSid: 'RM_123',
         jobId: 'job-1',
+        applicationId: 'app-1',
         endedAt: '2026-01-01T00:00:00.000Z',
         transcript: [{ role: 'user', text: 'Halo', createdAt: 1 }],
       }),
