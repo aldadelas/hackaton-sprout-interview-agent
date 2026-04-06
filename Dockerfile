@@ -45,6 +45,12 @@ RUN pnpm build
 # This ensures the container is ready to run immediately without downloading
 # dependencies at runtime, which improves startup time and reliability
 # Your package.json must contain a "download-files" script, such as `"download-files": "pnpm run build && node dist/agent.js download-files"`
+#
+# @livekit/agents-plugin-livekit menyimpan cache HF di ~/.cache/huggingface/hub (pakai os.homedir()).
+# Build stage berjalan sebagai root: default HOME=/root sehingga model tidak ikut ke image final (hanya COPY /app).
+# Paksa HOME=/app agar cache jatuh di /app/.cache/... dan ikut ter-copy ke stage production.
+ENV HOME=/app
+ENV XDG_CACHE_HOME=/app/.cache
 RUN pnpm download-files
 
 # Remove dev dependencies for a leaner production image
@@ -71,6 +77,9 @@ WORKDIR /app
 COPY --from=build --chown=appuser:appuser /app /app
 
 USER appuser
+
+# Samakan dengan build stage: plugin turn-detector membaca cache di $HOME/.cache/huggingface/hub
+ENV HOME=/app
 
 # Set Node.js to production mode
 ENV NODE_ENV=production

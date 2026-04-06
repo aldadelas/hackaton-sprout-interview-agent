@@ -20,6 +20,10 @@ import {
   shouldEndConversationWithLlm,
   shouldRunEndIntentLlm,
 } from './end-conversation';
+import {
+  patchInterviewStatus,
+  type InterviewTerminalStatus,
+} from './interview-status-api';
 import { createTranscriptStore, sendTranscriptToExternalApi } from './transcript';
 import {
   getAecWarmupMs,
@@ -37,6 +41,37 @@ export default defineAgent({
     proc.userData.vad = await silero.VAD.load(getSileroVadLoadOptions());
   },
   entry: async (ctx: JobContext) => {
+    const interviewTerminal: {
+      status: InterviewTerminalStatus;
+      applicationId?: string;
+      sessionStarted: boolean;
+    } = {
+      status: 'completed',
+      sessionStarted: false,
+    };
+
+    ctx.addShutdownCallback(async () => {
+      const baseUrl = process.env.INTERVIEW_STATUS_API_BASE_URL?.trim();
+      if (!baseUrl) {
+        return;
+      }
+      const applicationId = interviewTerminal.applicationId;
+      if (!applicationId) {
+        return;
+      }
+      let status = interviewTerminal.status;
+      if (status === 'completed' && !interviewTerminal.sessionStarted) {
+        status = 'aborted';
+      }
+      const token = process.env.INTERVIEW_STATUS_API_TOKEN?.trim();
+      await patchInterviewStatus({
+        baseUrl,
+        applicationId,
+        status,
+        ...(token ? { token } : {}),
+      });
+    });
+
     const transcriptStore = createTranscriptStore();
     const transcriptApiUrl = process.env.TRANSCRIPT_API_URL;
     const transcriptApiToken = process.env.TRANSCRIPT_API_TOKEN;
@@ -69,9 +104,19 @@ export default defineAgent({
     });
 
     const agentInstructions = instructionResult.instructions;
-    const applicationId = instructionResult.applicationId;
+    const instructionApplicationId = instructionResult.applicationId;
+    if (instructionApplicationId) {
+      interviewTerminal.applicationId = instructionApplicationId;
+    }
 
-    await ctx.connect();
+    try {
+      await ctx.connect();
+    } catch (error) {
+      console.error('Gagal ctx.connect / agen tidak bisa join room.', { error });
+      interviewTerminal.status = 'failed';
+      ctx.shutdown('connect_failed');
+      return;
+    }
 
     // Set up a voice AI pipeline using OpenAI, Cartesia, Deepgram, and the LiveKit turn detector
     const session = new voice.AgentSession({
@@ -95,6 +140,10 @@ export default defineAgent({
       tts: new inference.TTS({
         model: 'cartesia/sonic-3',
         voice: '9626c31c-bec5-4cca-baa8-f8ba9e84c8bc',
+        // model: 'elevenlabs/eleven_flash_v2_5',
+        // voice: 'X5MLBoL2nAT0ClMkxsxn',
+        language: 'id',
+        // apiKey: process.env.ELEVEN_API_KEY!,
       }),
 
       // VAD and turn detection are used to determine when the user is speaking and when the agent should respond
@@ -118,16 +167,24 @@ export default defineAgent({
     // });
 
     // Start the session, which initializes the voice pipeline and warms up the models
-    await session.start({
-      agent: new Agent({ instructions: agentInstructions }),
-      room: ctx.room,
-      inputOptions: {
-        // LiveKit Cloud enhanced noise cancellation
-        // - If self-hosting, omit this parameter
-        // - For telephony applications, use `BackgroundVoiceCancellationTelephony` for best results
-        noiseCancellation: BackgroundVoiceCancellation(),
-      },
-    });
+    try {
+      await session.start({
+        agent: new Agent({ instructions: agentInstructions }),
+        room: ctx.room,
+        inputOptions: {
+          // LiveKit Cloud enhanced noise cancellation
+          // - If self-hosting, omit this parameter
+          // - For telephony applications, use `BackgroundVoiceCancellationTelephony` for best results
+          noiseCancellation: BackgroundVoiceCancellation(),
+        },
+      });
+    } catch (error) {
+      console.error('Gagal session.start (pipeline suara / model).', { error });
+      interviewTerminal.status = 'failed';
+      ctx.shutdown('session_start_failed');
+      return;
+    }
+    interviewTerminal.sessionStarted = true;
 
     session.on(voice.AgentSessionEventTypes.ConversationItemAdded, (event) => {
       transcriptStore.addFromConversationItem(event.item);
@@ -228,7 +285,7 @@ export default defineAgent({
           roomName: ctx.room.name ?? '',
           roomSid,
           jobId: ctx.job.id,
-          ...(applicationId ? { applicationId } : {}),
+          ...(instructionApplicationId ? { applicationId: instructionApplicationId } : {}),
         });
 
         const request = {
@@ -269,6 +326,6 @@ export default defineAgent({
 cli.runApp(
   new ServerOptions({
     agent: fileURLToPath(import.meta.url),
-    agentName: 'hackathon-sprout',
+    agentName: 'hackathon-sprout-dev',
   }),
 );
